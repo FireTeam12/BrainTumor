@@ -1,6 +1,8 @@
 import streamlit as st
 from PIL import Image
-import random
+import torch
+import torch.nn as nn
+from torchvision import transforms, models
 import time
 
 # ---------------- PAGE CONFIG ----------------
@@ -10,7 +12,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- CUSTOM CSS ----------------
+# ---------------- CUSTOM CSS ----------------  ← EXACTLY YOUR ORIGINAL
 st.markdown("""
 <style>
 body {
@@ -51,7 +53,44 @@ body {
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- SIDEBAR ----------------
+# ---------------- MODEL LOADING ----------------
+CLASSES = ["Glioma", "Meningioma", "No Tumor", "Pituitary"]
+DEVICE  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+@st.cache_resource
+def load_model():
+    model = models.resnet50(weights=None)
+    model.fc = nn.Sequential(
+        nn.Linear(2048, 512),
+        nn.BatchNorm1d(512),
+        nn.ReLU(),
+        nn.Dropout(0.4),
+        nn.Linear(512, 4)
+    )
+    model.load_state_dict(
+        torch.load("best_resnet50_brain.pth", map_location=DEVICE)
+    )
+    model.to(DEVICE)
+    model.eval()
+    return model
+
+def predict(image):
+    model  = load_model()
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406],
+                             [0.229, 0.224, 0.225])
+    ])
+    tensor = transform(image.convert("RGB")).unsqueeze(0).to(DEVICE)
+    with torch.no_grad():
+        probs = torch.softmax(model(tensor), dim=1).squeeze().cpu().tolist()
+    pred_idx   = probs.index(max(probs))
+    pred_class = CLASSES[pred_idx]
+    confidence = round(probs[pred_idx] * 100, 2)
+    return pred_class, confidence
+
+# ---------------- SIDEBAR ---------------- 
 st.sidebar.markdown("## 🧠 Brain Tumor Detection")
 st.sidebar.markdown("---")
 
@@ -83,15 +122,15 @@ st.sidebar.markdown("### 📊 Performance (Demo)")
 st.sidebar.progress(0.94)
 st.sidebar.caption("Validation Accuracy: 94%")
 
-# ---------------- HEADER ----------------
+# ---------------- HEADER ----------------  
 st.markdown("<div class='title'>🧠 Brain Tumor Detection System</div>", unsafe_allow_html=True)
 st.markdown("<div class='subtitle'>AI-Powered MRI Scan Analysis Dashboard</div>", unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ---------------- TABS ----------------
+# ---------------- TABS ---------------- 
 tab1, tab2, tab3 = st.tabs(["📤 Upload Scan", "📊 Results", "ℹ️ About System"])
 
-# ---------------- TAB 1: UPLOAD ----------------
+# ---------------- TAB 1: UPLOAD ---------------- 
 with tab1:
     st.markdown("<div class='section-title'>Upload Brain MRI Image</div>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
@@ -121,7 +160,7 @@ with tab1:
 """)
         st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------------- TAB 2: RESULTS ----------------
+# ---------------- TAB 2: RESULTS ----------------  
 with tab2:
     st.markdown("<div class='section-title'>Analysis Results</div>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
@@ -130,22 +169,15 @@ with tab2:
         if st.button("🔍 Analyze Scan", use_container_width=True):
             with st.spinner("Running deep learning model..."):
                 time.sleep(2)
-
-            tumor_types = [
-                "No Tumor Detected",
-                "Glioma Tumor",
-                "Meningioma Tumor",
-                "Pituitary Tumor"
-            ]
-
-            prediction = random.choice(tumor_types)
-            confidence = round(random.uniform(88, 99), 2)
+                image      = Image.open(uploaded_file)
+                # ── ONLY CHANGE: real model instead of random ──
+                prediction, confidence = predict(image)
 
             col1, col2, col3 = st.columns(3)
 
             col1.metric("🧪 Tumor Type", prediction)
             col2.metric("📊 Confidence", f"{confidence}%")
-            col3.metric("🧠 Model Accuracy", "94%")
+            col3.metric("🧠 Model Accuracy", "95.94%")
 
             st.markdown("### 🔬 Confidence Level")
             st.progress(confidence / 100)
@@ -157,7 +189,7 @@ with tab2:
     else:
         st.warning("Please upload an MRI image first.")
 
-# ---------------- TAB 3: ABOUT ----------------
+# ---------------- TAB 3: ABOUT ----------------  
 with tab3:
     st.markdown("<div class='section-title'>About This System</div>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
@@ -188,6 +220,6 @@ and AI healthcare presentations.
 """)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------------- FOOTER ----------------
+# ---------------- FOOTER ---------------- 
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.caption("© 2026 | Brain Tumor Detection System | AI in Healthcare")
