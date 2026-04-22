@@ -80,7 +80,7 @@ def load_model():
         nn.Linear(512, 4)
     )
     model.load_state_dict(
-        torch.load(MODEL_PATH, map_location=DEVICE)
+        torch.load(MODEL_PATH, map_location=DEVICE, weights_only=False)
     )
     model.to(DEVICE)
     model.eval()
