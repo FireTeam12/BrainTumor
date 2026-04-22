@@ -85,9 +85,10 @@ def load_model():
     model.to(DEVICE)
     model.eval()
     return model
+model  = load_model()
+    model = model.to("cpu")
 
 def predict(image):
-    model  = load_model()
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
