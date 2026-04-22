@@ -59,7 +59,7 @@ DEVICE  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 import os
 import requests
 
-MODEL_URL = "https://huggingface.co/Tarekkkkk12/brain_classifier/best_resnet50_brain.pth"
+MODEL_URL = "https://huggingface.co/Tarekkkkk12/brain_classifier/resolve/main/best_resnet50_brain.pth"
 MODEL_PATH = "best_resnet50_brain.pth"
 def download_model():
     if not os.path.exists(MODEL_PATH):
