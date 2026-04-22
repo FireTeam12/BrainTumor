@@ -86,7 +86,7 @@ def load_model():
     model.eval()
     return model
 model  = load_model()
-    model = model.to("cpu")
+model = model.to("cpu")
 
 def predict(image):
     transform = transforms.Compose([
