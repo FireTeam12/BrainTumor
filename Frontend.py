@@ -56,9 +56,21 @@ body {
 # ---------------- MODEL LOADING ----------------
 CLASSES = ["Glioma", "Meningioma", "No Tumor", "Pituitary"]
 DEVICE  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+import os
+import requests
+
+MODEL_URL = "https://huggingface.co/Tarekkkkk12/brain_classifier/best_resnet50_brain.pth"
+MODEL_PATH = "best_resnet50_brain.pth"
+def download_model():
+    if not os.path.exists(MODEL_PATH):
+        with st.spinner("Downloading model from Hugging Face..."):
+            r = requests.get(MODEL_URL)
+            with open(MODEL_PATH, "wb") as f:
+                f.write(r.content)
 
 @st.cache_resource
 def load_model():
+    download_model()  # 👈 ADD THIS
     model = models.resnet50(weights=None)
     model.fc = nn.Sequential(
         nn.Linear(2048, 512),
@@ -68,7 +80,7 @@ def load_model():
         nn.Linear(512, 4)
     )
     model.load_state_dict(
-        torch.load("best_resnet50_brain.pth", map_location=DEVICE)
+        torch.load(MODEL_PATH, map_location=DEVICE)
     )
     model.to(DEVICE)
     model.eval()
